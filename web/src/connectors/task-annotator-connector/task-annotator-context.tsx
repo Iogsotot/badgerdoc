@@ -846,7 +846,7 @@ export const TaskAnnotatorContextProvider: React.FC<ProviderProps> = ({
         if (!task || !latestAnnotationsResult.data) return;
 
         let { revision, pages } = latestAnnotationsResult.data;
-        
+
         const selectedLabelsId: string[] = selectedLabels.map((obj) => obj.id) ?? [];
         console.log(selectedLabelsId);
         onCloseDataTab();
