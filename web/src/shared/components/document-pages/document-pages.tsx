@@ -2,7 +2,6 @@ import { IconButton, IconContainer, Spinner } from '@epam/loveship';
 import { ReactComponent as increaseIcon } from '@epam/assets/icons/common/action-add-24.svg';
 import { ReactComponent as decreaseIcon } from '@epam/assets/icons/common/content-minus-24.svg';
 import { ReactComponent as searchIcon } from '@epam/assets/icons/common/action-search-18.svg';
-// import { ReactComponent as squareIcon } from '@epam/assets/icons/common/action-copy_content-18.svg';
 import React, { CSSProperties, FC, Fragment, ReactNode, useEffect, useState } from 'react';
 import { Document, Page, PDFPageProxy, pdfjs } from 'react-pdf';
 import { getPdfDocumentAddress } from 'shared/helpers/get-pdf-document-address';
@@ -14,6 +13,8 @@ import styles from './document-pages.module.scss';
 import './react-pdf.scss';
 import DocumentSinglePage from './document-single-page';
 import { Annotation } from 'shared';
+import { LabelsPanel } from 'components/labels-panel';
+import { useTaskAnnotatorContext } from 'connectors/task-annotator-connector/task-annotator-context';
 
 export interface PageSize {
     width: number;
@@ -75,6 +76,8 @@ const DocumentPages: FC<DocumentPagesProps> = ({
     const [updLinks, setUpdLinks] = useState<boolean>(false);
 
     const [readyLinks, setReadyLinks] = useState(null as ReactNode);
+
+    const { selectedLabels } = useTaskAnnotatorContext();
 
     useEffect(() => {
         const newPageSize = apiPageSize && apiPageSize.height > 0 ? apiPageSize : originalPageSize;
@@ -144,17 +147,46 @@ const DocumentPages: FC<DocumentPagesProps> = ({
     }, [updLinks, scale, annotatorLinks]);
 
     return (
-        <div className={styles['pdf-container']}>
-            {pageScale}
-            <div className={`${styles['pdf-parent']} pdf-parent`}>
-                {fileMetaInfo.extension === '.pdf' ? (
-                    <>
-                        <Document
-                            file={getPdfDocumentAddress(fileMetaInfo.id)}
-                            loading={<Spinner color="sky" />}
-                            options={{ httpHeaders: getAuthHeaders() }}
-                            className={styles['document-wrapper']}
-                        >
+        <>
+            <LabelsPanel labels={selectedLabels ?? []} />
+            <div className={styles['pdf-container']}>
+                {pageScale}
+                <div className={`${styles['pdf-parent']} pdf-parent`}>
+                    {fileMetaInfo.extension === '.pdf' ? (
+                        <>
+                            <Document
+                                file={getPdfDocumentAddress(fileMetaInfo.id)}
+                                loading={<Spinner color="sky" />}
+                                options={{ httpHeaders: getAuthHeaders() }}
+                                className={styles['document-wrapper']}
+                            >
+                                {pageNumbers.map((pageNum) => {
+                                    return (
+                                        <Fragment key={pageNum}>
+                                            <DocumentSinglePage
+                                                scale={scale}
+                                                pageSize={apiPageSize}
+                                                pageNum={pageNum}
+                                                handlePageLoaded={handlePageLoaded}
+                                                handleLinksUpdate={handleLinksUpdate}
+                                                containerRef={containerRef}
+                                                editable={editable}
+                                                onAnnotationCopyPress={onAnnotationCopyPress}
+                                                onAnnotationCutPress={onAnnotationCutPress}
+                                                onAnnotationPastePress={onAnnotationPastePress}
+                                                onAnnotationUndoPress={onAnnotationUndoPress}
+                                                onAnnotationRedoPress={onAnnotationRedoPress}
+                                                onEmptyAreaClick={onEmptyAreaClick}
+                                            />
+                                        </Fragment>
+                                    );
+                                })}
+                                {<Fragment>{readyLinks}</Fragment>}
+                            </Document>
+                        </>
+                    ) : null}
+                    {fileMetaInfo.extension === '.jpg' ? (
+                        <>
                             {pageNumbers.map((pageNum) => {
                                 return (
                                     <Fragment key={pageNum}>
@@ -166,6 +198,8 @@ const DocumentPages: FC<DocumentPagesProps> = ({
                                             handleLinksUpdate={handleLinksUpdate}
                                             containerRef={containerRef}
                                             editable={editable}
+                                            isImage
+                                            imageId={fileMetaInfo.id}
                                             onAnnotationCopyPress={onAnnotationCopyPress}
                                             onAnnotationCutPress={onAnnotationCutPress}
                                             onAnnotationPastePress={onAnnotationPastePress}
@@ -176,39 +210,11 @@ const DocumentPages: FC<DocumentPagesProps> = ({
                                     </Fragment>
                                 );
                             })}
-                            {<Fragment>{readyLinks}</Fragment>}
-                        </Document>
-                    </>
-                ) : null}
-                {fileMetaInfo.extension === '.jpg' ? (
-                    <>
-                        {pageNumbers.map((pageNum) => {
-                            return (
-                                <Fragment key={pageNum}>
-                                    <DocumentSinglePage
-                                        scale={scale}
-                                        pageSize={apiPageSize}
-                                        pageNum={pageNum}
-                                        handlePageLoaded={handlePageLoaded}
-                                        handleLinksUpdate={handleLinksUpdate}
-                                        containerRef={containerRef}
-                                        editable={editable}
-                                        isImage
-                                        imageId={fileMetaInfo.id}
-                                        onAnnotationCopyPress={onAnnotationCopyPress}
-                                        onAnnotationCutPress={onAnnotationCutPress}
-                                        onAnnotationPastePress={onAnnotationPastePress}
-                                        onAnnotationUndoPress={onAnnotationUndoPress}
-                                        onAnnotationRedoPress={onAnnotationRedoPress}
-                                        onEmptyAreaClick={onEmptyAreaClick}
-                                    />
-                                </Fragment>
-                            );
-                        })}
-                    </>
-                ) : null}
+                        </>
+                    ) : null}
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 

@@ -9,7 +9,7 @@ import React, {
     useRef,
     useState
 } from 'react';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, isEqual } from 'lodash';
 import { Task } from 'api/typings/tasks';
 import { useSetTaskFinished, useSetTaskState, useTaskById } from 'api/hooks/tasks';
 import { useCategoriesByJob } from 'api/hooks/categories';
@@ -19,6 +19,7 @@ import {
     ExternalViewerState,
     FileDocument,
     Filter,
+    Label,
     Link,
     Operators,
     SortingDirection,
@@ -134,6 +135,11 @@ type ContextValue = {
     setSelectedToolParams: (nt: PaperToolParams) => void;
     setSelectedAnnotation: (annotation: Annotation | undefined) => void;
     taskHasTaxonomies?: boolean;
+    selectedLabels?: Label[];
+    onLabelsSelected: (labels: Label[]) => void;
+    setSelectedLabels: (labels: Label[]) => void;
+    latestLabelsId: string[];
+    isDocLabelsModified: boolean;
 };
 
 const TaskAnnotatorContext = createContext<ContextValue | undefined>(undefined);
@@ -163,6 +169,9 @@ export const TaskAnnotatorContextProvider: FC<ProviderProps> = ({
     children
 }) => {
     const [selectedCategory, setSelectedCategory] = useState<Category>();
+    const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
+    const [latestLabelsId, setLatestLabelsId] = useState<string[]>([]);
+    const [isDocLabelsModified, setIsDocLabelsModified] = useState<boolean>(false);
     const [selectedLink, setSelectedLink] = useState<Link>();
     const [allAnnotations, setAllAnnotations] = useState<Record<number, Annotation[]>>({});
 
@@ -422,6 +431,18 @@ export const TaskAnnotatorContextProvider: FC<ProviderProps> = ({
 
     const onCategorySelected = (category: Category) => {
         setSelectedCategory(category);
+    };
+
+    const onLabelsSelected = (labels: Label[]) => {
+        if (!Array.isArray(labels)) return;
+
+        const currentLabelsId = labels.map((label) => label.id);
+        if (isEqual(latestLabelsId, currentLabelsId)) {
+            setIsDocLabelsModified(false);
+        } else {
+            setIsDocLabelsModified(true);
+        }
+        setSelectedLabels(labels);
     };
 
     const onLinkSelected = (link: Link) => {
@@ -796,7 +817,7 @@ export const TaskAnnotatorContextProvider: FC<ProviderProps> = ({
         if (!task || !latestAnnotationsResult.data) return;
 
         let { revision, pages } = latestAnnotationsResult.data;
-
+        const selectedLabelsId: string[] = selectedLabels.map((obj) => obj.id) ?? [];
         onCloseDataTab();
 
         if (task.is_validation) {
@@ -825,7 +846,8 @@ export const TaskAnnotatorContextProvider: FC<ProviderProps> = ({
                 userId: task.user_id,
                 revision,
                 validPages,
-                invalidPages
+                invalidPages,
+                selectedLabelsId
             });
             onSaveTaskSuccess();
             latestAnnotationsResult.refetch();
@@ -837,11 +859,13 @@ export const TaskAnnotatorContextProvider: FC<ProviderProps> = ({
 
     const onAnnotationTaskFinish = () => {
         if (task) {
-            onSaveTask().then((e) => {
-                useSetTaskFinished(task!.id);
-                useSetTaskState({ id: task!.id, eventType: 'closed' });
-                onRedirectAfterFinish();
-            });
+            onSaveTask()
+                .then(() => {
+                    useSetTaskFinished(task!.id);
+                    useSetTaskState({ id: task!.id, eventType: 'closed' });
+                    onRedirectAfterFinish();
+                })
+                .catch((e) => console.error(e));
         }
     };
 
@@ -903,6 +927,8 @@ export const TaskAnnotatorContextProvider: FC<ProviderProps> = ({
 
     useEffect(() => {
         if (!latestAnnotationsResult.data || !categories?.data) return;
+        const latestLabelIds = latestAnnotationsResult.data.categories;
+        setLatestLabelsId(latestLabelIds);
         setValidPages(latestAnnotationsResult.data.validated);
         setInvalidPages(latestAnnotationsResult.data.failed_validation_pages);
 
@@ -1086,7 +1112,13 @@ export const TaskAnnotatorContextProvider: FC<ProviderProps> = ({
             onAnnotationUndoPress,
             onAnnotationRedoPress,
             onExternalViewerClose,
-            setSelectedAnnotation
+            setSelectedAnnotation,
+            selectedLabels,
+            onLabelsSelected,
+            isDocLabelsModified,
+            setSelectedLabels,
+            latestLabelsId,
+            setLatestLabelsId
         };
     }, [
         task,
@@ -1112,7 +1144,9 @@ export const TaskAnnotatorContextProvider: FC<ProviderProps> = ({
         externalViewer,
         tableCellCategory,
         isDataTabDisabled,
-        selectedToolParams
+        selectedToolParams,
+        selectedLabels,
+        latestLabelsId
     ]);
 
     return <TaskAnnotatorContext.Provider value={value}>{children}</TaskAnnotatorContext.Provider>;
