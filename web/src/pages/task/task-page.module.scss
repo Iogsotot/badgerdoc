@@ -5,9 +5,13 @@
     display: grid;
     grid-template-columns: 320px 1fr 320px;
     gap: 1rem;
-    padding: 1rem 1rem 1rem 0.5rem;
+    padding: 0.7rem 0.5rem 0.7rem 0.5rem;
 }
 
 .title {
-    padding: 22px 24px 8px 75px;
+    padding: 6px 8px;
+    min-height: unset;
+    & * {
+        font-size: 14px;
+    }
 }
