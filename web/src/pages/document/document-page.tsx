@@ -17,6 +17,7 @@ import { useHistory } from 'react-router-dom';
 import { DOCUMENTS_PAGE, JOBS_PAGE, PREVIOUS_PAGE_JOB } from '../../shared/constants/general';
 import { BreadcrumbNavigation } from '../../shared/components/breadcrumb';
 import { FlowSideBar } from 'components/task/task-sidebar-flow/task-sidebar-flow';
+import { FlexRow } from '@epam/loveship';
 
 export interface DocumentPageProps {
     fileMetaInfo: FileMetaInfo;
@@ -56,9 +57,9 @@ export function DocumentPage(props: DocumentPageProps) {
 
     return (
         <div className={styles['document-page']}>
-            <div className={styles['document-page-subheader']}>
+            <FlexRow cx={styles.title}>
                 <BreadcrumbNavigation breadcrumbs={crumbs} />
-            </div>
+            </FlexRow>
             <div className={styles['document-page-content']}>
                 <TaskAnnotatorContextProvider
                     jobId={documentJobId}
